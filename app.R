@@ -33,6 +33,38 @@ parse_nums <- function(txt){
 }
 fuente <- function(id, opciones){ radioButtons(id, "Origen de los datos", opciones, inline=TRUE) }
 
+# ---- Datasets de ejemplo (deterministas) para descargar y practicar ----
+set.seed(2026)
+.pre <- round(rnorm(15,150,12))
+ej_presion <- data.frame(
+  paciente = 1:15,
+  pre_PAS  = .pre,
+  post_PAS = .pre - round(rnorm(15,9,4))       # mismo paciente, con una baja real
+)                                   # pareadas: presión sistólica antes/después
+ej_glucosa <- data.frame(
+  grupo   = rep(c("Control","Dieta"), each=18),
+  glucosa = round(c(rnorm(18,132,16), rnorm(18,118,15)))
+)                                   # independientes: glucosa por grupo
+ej_epi <- data.frame(
+  exposicion = rep(c("Fumador","No fumador"), c(95,105)),
+  evento     = c(rep(c("EPOC","Sano"), c(45,50)),
+                 rep(c("EPOC","Sano"), c(25,80))))  # 2x2: tabaquismo × EPOC
+
+glosario_tab <- "
+<table style='font-size:13.5px'>
+<tr><th>Término</th><th>Qué significa</th></tr>
+<tr><td><b>Intervalo de confianza (IC)</b></td><td>Rango plausible del valor real del parámetro, con 95% de confianza.</td></tr>
+<tr><td><b>Media / Desviación</b></td><td>Promedio del grupo / cuánto se dispersan los datos alrededor de la media.</td></tr>
+<tr><td><b>Error estándar</b></td><td>Cuánto varía el estimador de muestra en muestra (baja al crecer n).</td></tr>
+<tr><td><b>Independientes vs. pareadas</b></td><td>Grupos de personas distintas vs. las mismas personas medidas dos veces.</td></tr>
+<tr><td><b>Riesgo</b></td><td>Probabilidad del evento en un grupo: casos / total del grupo.</td></tr>
+<tr><td><b>RR (riesgo relativo)</b></td><td>Cociente de riesgos. RR=2 → el doble de riesgo. Referencia sin efecto: 1.</td></tr>
+<tr><td><b>OR (odds ratio)</b></td><td>Cociente de odds. Obligatorio en casos y controles. Referencia sin efecto: 1.</td></tr>
+<tr><td><b>RD (dif. de riesgos)</b></td><td>Exceso absoluto de riesgo por la exposición (riesgo expuestos − no expuestos).</td></tr>
+<tr><td><b>NNH</b></td><td>Personas expuestas por cada caso adicional (1 / |RD|).</td></tr>
+<tr><td><b>Valor \"sin efecto\"</b></td><td><b>0</b> para diferencias; <b>1</b> para cocientes (OR/RR).</td></tr>
+</table>"
+
 ui <- fluidPage(
   tags$head(tags$style(HTML(css))),
   div(class="titlebox",
@@ -92,7 +124,41 @@ ui <- fluidPage(
           helpText("Ejemplo: tabaquismo materno × bajo peso al nacer.")),
         mainPanel(
           div(class="concept", HTML("<b>¿Qué calculas aquí?</b> Si una <b>exposición</b> se asocia con un <b>evento</b>. <b>RR</b> compara riesgos; <b>OR</b> compara odds. \"Sin efecto\": el <b>1</b>. Además <b>RD</b> y <b>NNH</b>.")),
-          htmlOutput("Cout"), plotOutput("Cplot",height="230px"))))
+          htmlOutput("Cout"), plotOutput("Cplot",height="230px")))),
+    # ================= GLOSARIO Y TRABAJOS =================
+    tabPanel("📚 Glosario y trabajos",
+      fluidRow(
+        column(5,
+          div(class="concept", HTML("<b>Glosario de conceptos</b> — consulta rápida mientras usas la calculadora.")),
+          HTML(glosario_tab)),
+        column(7,
+          h4("Datasets de ejemplo"),
+          p(style="font-size:13px;color:#5B6B70","Descárgalos y súbelos con \"Subir CSV\" en la pestaña indicada (o ábrelos para ver sus variables)."),
+          wellPanel(class="well",
+            HTML("<b>presion_pre_post.csv</b> → pestaña <b>B (pareadas)</b><br>
+                  <span style='font-size:12.5px;color:#5B6B70'>Variables: <b>paciente</b> (id), <b>pre_PAS</b> (presión sistólica antes), <b>post_PAS</b> (después). Usa pre_PAS como PRE y post_PAS como POST.</span>"),
+            downloadButton("dl_presion","Descargar CSV")),
+          wellPanel(class="well",
+            HTML("<b>glucosa_dos_grupos.csv</b> → pestaña <b>A (independientes)</b><br>
+                  <span style='font-size:12.5px;color:#5B6B70'>Variables: <b>grupo</b> (Control/Dieta), <b>glucosa</b> (mg/dL). Variable numérica = glucosa; grupo = grupo.</span>"),
+            downloadButton("dl_glucosa","Descargar CSV")),
+          wellPanel(class="well",
+            HTML("<b>tabaquismo_epoc.csv</b> → pestaña <b>C (OR/RR)</b><br>
+                  <span style='font-size:12.5px;color:#5B6B70'>Variables: <b>exposicion</b> (Fumador/No fumador), <b>evento</b> (EPOC/Sano). Exposición = exposicion; evento = evento.</span>"),
+            downloadButton("dl_epi","Descargar CSV"))
+        )),
+      hr(),
+      h4("Trabajos propuestos (resuélvelos con la app y entrégalos)"),
+      HTML("<ol style='line-height:1.7;font-size:14px'>
+        <li><b>Independientes.</b> Con <i>glucosa_dos_grupos.csv</i>, estima el IC 95% de la diferencia de glucosa entre Control y Dieta (Welch). ¿El IC incluye 0? Interpreta la magnitud.</li>
+        <li><b>Pareadas.</b> Con <i>presion_pre_post.csv</i>, calcula el IC 95% del cambio de presión (post − pre). ¿Baja la presión? ¿Cuánto?</li>
+        <li><b>OR/RR.</b> Con <i>tabaquismo_epoc.csv</i>, obtén RR y OR con IC 95%. ¿Hay asociación? Reporta también RD y NNH.</li>
+        <li><b>Nivel de confianza.</b> Repite el trabajo 1 al 90% y al 99%. ¿Cómo cambia el ancho del IC? Explica por qué.</li>
+        <li><b>OR vs. RR.</b> En el trabajo 3, compara OR y RR. ¿Cuál es mayor? ¿Por qué? ¿Cuál reportarías?</li>
+        <li><b>Tus datos.</b> Trae un dato real de tu área (o de ENDES/MINSA), cárgalo (pegar o CSV) y redacta la conclusión con la regla de oro (0 / 1).</li>
+      </ol>"),
+      p(style="font-size:12px;color:#5B6B70","Entrega: captura de la pantalla de resultados + un párrafo de interpretación por cada trabajo.")
+    )
   ),
   div(style="padding:8px 18px;font-size:12px;color:#5B6B70",
       HTML("Regla de oro: si el IC de una <b>diferencia</b> incluye <b>0</b>, o el de un <b>cociente</b> (OR/RR) incluye <b>1</b>, no hay evidencia de efecto."))
@@ -100,6 +166,10 @@ ui <- fluidPage(
 
 server <- function(input, output){
   errbox <- function(msg) HTML(sprintf("<div class='err'>%s</div>", msg))
+  # descargas de datasets de ejemplo
+  output$dl_presion <- downloadHandler("presion_pre_post.csv", function(f) write.csv(ej_presion, f, row.names=FALSE))
+  output$dl_glucosa <- downloadHandler("glucosa_dos_grupos.csv", function(f) write.csv(ej_glucosa, f, row.names=FALSE))
+  output$dl_epi     <- downloadHandler("tabaquismo_epoc.csv", function(f) write.csv(ej_epi, f, row.names=FALSE))
   Acsv <- reactive({ req(input$Afile); read.csv(input$Afile$datapath, stringsAsFactors=TRUE) })
   Bcsv <- reactive({ req(input$Bfile); read.csv(input$Bfile$datapath, stringsAsFactors=TRUE) })
   Ccsv <- reactive({ req(input$Cfile); read.csv(input$Cfile$datapath, stringsAsFactors=TRUE) })
